@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#141018">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Foco · Pomodoro</title>
+<style>
+:root{
+  --bg:#141018;
+  --bg-soft:#1d1824;
+  --card:#221c2c;
+  --card-2:#2a2336;
+  --line:#33293f;
+  --txt:#efe9f5;
+  --txt-dim:#a99fb8;
+  --txt-faint:#6f6580;
+  --accent:#ff7a59;        /* foco (ámbar/coral) */
+  --accent-2:#ffb47a;
+  --rest:#48d1a8;          /* descanso (verde menta) */
+  --rest-2:#8ff0d3;
+  --gold:#ffcf6b;
+  --danger:#ff5d73;
+  --radius:22px;
+  --shadow:0 18px 50px -20px rgba(0,0,0,.7);
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;height:100%;}
+body{
+  font-family:var(--font);
+  background:radial-gradient(120% 100% at 50% -10%,#241b30 0%,var(--bg) 55%);
+  color:var(--txt);
+  overflow:hidden;
+  transition:background .8s ease;
+  -webkit-font-smoothing:antialiased;
+}
+body.rest{background:radial-gradient(120% 100% at 50% -10%,#10302a 0%,#0f1a18 55%);}
+body.focusing.running #topbar,body.focusing.running #nav{opacity:0;pointer-events:none;transform:translateY(-6px);}
+body.focusing.running.reveal #topbar,body.focusing.running.reveal #nav{opacity:1;pointer-events:auto;transform:none;}
+
+.app{height:100%;display:flex;flex-direction:column;max-width:520px;margin:0 auto;position:relative;}
+
+/* ---------- Topbar ---------- */
+#topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:calc(14px + env(safe-area-inset-top)) 20px 10px;
+  transition:opacity .5s ease,transform .5s ease;
+}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:.2px;font-size:15px;}
+.brand .dot{width:11px;height:11px;border-radius:50%;background:var(--accent);box-shadow:0 0 14px var(--accent);}
+body.rest .brand .dot{background:var(--rest);box-shadow:0 0 14px var(--rest);}
+.stats-chip{display:flex;gap:14px;align-items:center;}
+.chip{display:flex;align-items:center;gap:5px;font-size:14px;font-weight:600;color:var(--txt-dim);}
+.chip b{color:var(--txt);font-variant-numeric:tabular-nums;}
+.chip .ic{font-size:15px;}
+
+/* ---------- Screens ---------- */
+main{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.screen{display:none;padding:6px 20px 120px;animation:fade .4s ease;}
+.screen.active{display:block;}
+@keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* ---------- Timer ---------- */
+#screen-timer{display:none;flex-direction:column;align-items:center;justify-content:flex-start;height:100%;padding:0 20px;}
+#screen-timer.active{display:flex;}
+.phase-tabs{display:flex;gap:6px;background:var(--bg-soft);padding:5px;border-radius:16px;margin:2px 0 8px;border:1px solid var(--line);}
+.phase-tabs button{
+  border:0;background:transparent;color:var(--txt-faint);font-family:inherit;font-weight:600;
+  font-size:12.5px;padding:8px 13px;border-radius:12px;transition:.25s;cursor:pointer;
+}
+.phase-tabs button.on{background:var(--card-2);color:var(--txt);}
+body.focusing.running .phase-tabs{opacity:0;pointer-events:none;transition:opacity .5s;}
+body.focusing.running.reveal .phase-tabs{opacity:1;pointer-events:auto;}
+
+.ring-wrap{position:relative;width:min(78vw,340px);aspect-ratio:1;margin:2vh 0;display:flex;align-items:center;justify-content:center;}
+.ring{width:100%;height:100%;transform:rotate(-90deg);}
+.ring .track{fill:none;stroke:var(--line);stroke-width:9;}
+.ring .prog{fill:none;stroke:url(#grad);stroke-width:11;stroke-linecap:round;transition:stroke-dashoffset .35s linear;filter:drop-shadow(0 0 10px rgba(255,122,89,.35));}
+body.rest .ring .prog{stroke:var(--rest);filter:drop-shadow(0 0 10px rgba(72,209,168,.4));}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+.time{font-size:clamp(48px,15vw,74px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:1px;line-height:1;}
+.phase-label{margin-top:10px;font-size:13px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--accent-2);}
+body.rest .phase-label{color:var(--rest-2);}
+.overwork-tag{margin-top:8px;font-size:12px;font-weight:700;color:var(--gold);opacity:0;height:16px;transition:.3s;letter-spacing:.5px;}
+.overwork-tag.show{opacity:1;animation:pulse 1.6s ease-in-out infinite;}
+@keyframes pulse{50%{opacity:.55;}}
+
+/* motivational quote — subtle, ambient */
+.quote{
+  min-height:44px;max-width:320px;text-align:center;margin:6px auto 0;
+  font-size:14.5px;font-style:italic;font-weight:400;color:var(--txt-faint);
+  opacity:0;transition:opacity 2.2s ease;line-height:1.5;padding:0 6px;
+}
+.quote.show{opacity:.62;}
+
+/* armed bonuses */
+.armed{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;margin:12px 0 2px;min-height:26px;}
+.armed .b{font-size:11.5px;font-weight:600;background:var(--card);border:1px solid var(--line);color:var(--accent-2);padding:5px 10px;border-radius:20px;display:flex;gap:5px;align-items:center;}
+
+/* controls */
+.controls{display:flex;gap:14px;align-items:center;justify-content:center;margin-top:auto;padding-bottom:calc(20px + env(safe-area-inset-bottom));}
+.btn{border:0;font-family:inherit;cursor:pointer;transition:transform .12s ease,filter .2s;}
+.btn:active{transform:scale(.93);}
+.btn-main{
+  width:80px;height:80px;border-radius:50%;background:linear-gradient(150deg,var(--accent),#ff5f7a);
+  color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 14px 34px -10px rgba(255,122,89,.7);
+}
+body.rest .btn-main{background:linear-gradient(150deg,var(--rest),#39c2c8);box-shadow:0 14px 34px -10px rgba(72,209,168,.6);}
+.btn-round{width:56px;height:56px;border-radius:50%;background:var(--card);border:1px solid var(--line);color:var(--txt-dim);font-size:20px;display:flex;align-items:center;justify-content:center;}
+.btn-round.wide{width:auto;padding:0 20px;height:56px;font-size:14px;font-weight:600;gap:7px;}
+
+/* dots progress of the set */
+.set-dots{display:flex;gap:9px;margin:4px 0 2px;}
+.set-dots i{width:9px;height:9px;border-radius:50%;background:var(--line);transition:.3s;}
+.set-dots i.done{background:var(--accent);box-shadow:0 0 8px var(--accent);}
+body.rest .set-dots i.done{background:var(--rest);box-shadow:0 0 8px var(--rest);}
+
+/* ---------- Section headers ---------- */
+.h1{font-size:24px;font-weight:800;margin:14px 0 4px;letter-spacing:-.5px;}
+.sub{color:var(--txt-dim);font-size:13.5px;margin:0 0 18px;}
+.h2{font-size:14px;font-weight:700;color:var(--txt-dim);text-transform:uppercase;letter-spacing:1.2px;margin:26px 0 12px;}
+
+/* level card */
+.level-card{background:linear-gradient(135deg,var(--card),var(--card-2));border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);}
+.level-top{display:flex;justify-content:space-between;align-items:baseline;}
+.rank{font-size:19px;font-weight:800;}
+.lvl{font-size:13px;color:var(--gold);font-weight:700;}
+.xpbar{height:9px;background:var(--bg-soft);border-radius:20px;margin:12px 0 6px;overflow:hidden;}
+.xpbar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--gold));border-radius:20px;transition:width .5s;}
+.xp-lbl{font-size:12px;color:var(--txt-faint);display:flex;justify-content:space-between;}
+
+/* shop / bag items */
+.item{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:15px 16px;margin-bottom:11px;display:flex;gap:14px;align-items:center;}
+.item .emoji{font-size:26px;width:46px;height:46px;flex:none;display:flex;align-items:center;justify-content:center;background:var(--bg-soft);border-radius:14px;}
+.item .info{flex:1;min-width:0;}
+.item .name{font-weight:700;font-size:15px;}
+.item .desc{font-size:12.5px;color:var(--txt-dim);margin-top:2px;line-height:1.35;}
+.item .act{flex:none;}
+.buy{background:var(--card-2);border:1px solid var(--line);color:var(--gold);font-weight:700;font-size:13px;padding:9px 13px;border-radius:12px;font-family:inherit;cursor:pointer;display:flex;align-items:center;gap:4px;transition:.15s;}
+.buy:active{transform:scale(.93);}
+.buy:disabled{opacity:.4;color:var(--txt-faint);}
+.owned-badge{background:var(--accent);color:#fff;border-radius:11px;min-width:22px;height:22px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
+.use{background:linear-gradient(150deg,var(--accent),#ff5f7a);border:0;color:#fff;font-weight:700;font-size:13px;padding:9px 15px;border-radius:12px;font-family:inherit;cursor:pointer;}
+.use:active{transform:scale(.93);}
+.use.armed-b{background:var(--card-2);color:var(--rest);border:1px solid var(--rest);}
+
+/* stats */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+.stat-box{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;}
+.stat-box .n{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1;}
+.stat-box .l{font-size:12px;color:var(--txt-dim);margin-top:6px;font-weight:600;}
+.stat-box.hl{background:linear-gradient(135deg,#2c2136,#38243a);}
+.stat-box.hl .n{color:var(--accent-2);}
+.chart{display:flex;align-items:flex-end;gap:6px;height:130px;padding:14px 4px 0;background:var(--card);border:1px solid var(--line);border-radius:18px;}
+.bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;}
+.bar .fill{width:100%;max-width:26px;background:linear-gradient(180deg,var(--accent),#ff5f7a);border-radius:6px 6px 3px 3px;min-height:3px;transition:height .6s;}
+.bar.today .fill{background:linear-gradient(180deg,var(--gold),var(--accent));}
+.bar .lb{font-size:10px;color:var(--txt-faint);}
+.bar .vv{font-size:10px;color:var(--txt-dim);font-weight:700;height:12px;}
+.seg{display:flex;gap:5px;background:var(--bg-soft);padding:5px;border-radius:14px;border:1px solid var(--line);margin-bottom:14px;}
+.seg button{flex:1;border:0;background:transparent;color:var(--txt-faint);font-family:inherit;font-weight:700;font-size:13px;padding:9px;border-radius:10px;cursor:pointer;}
+.seg button.on{background:var(--card-2);color:var(--txt);}
+
+/* achievements */
+.ach{display:flex;gap:12px;align-items:center;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:9px;opacity:.5;}
+.ach.got{opacity:1;border-color:var(--gold);}
+.ach .e{font-size:24px;}
+.ach .t{font-weight:700;font-size:14px;}
+.ach .d{font-size:12px;color:var(--txt-dim);}
+
+/* settings rows */
+.row{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:10px;}
+.row .lab{font-size:14.5px;font-weight:600;}
+.row .sml{font-size:12px;color:var(--txt-dim);}
+.stepper{display:flex;align-items:center;gap:12px;}
+.stepper button{width:32px;height:32px;border-radius:10px;background:var(--card-2);border:1px solid var(--line);color:var(--txt);font-size:18px;font-family:inherit;cursor:pointer;}
+.stepper b{min-width:30px;text-align:center;font-variant-numeric:tabular-nums;}
+.switch{width:48px;height:28px;border-radius:20px;background:var(--bg-soft);border:1px solid var(--line);position:relative;cursor:pointer;transition:.2s;}
+.switch i{position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:var(--txt-faint);transition:.2s;}
+.switch.on{background:var(--accent);}
+.switch.on i{left:22px;background:#fff;}
+.link-btn{background:none;border:0;color:var(--danger);font-family:inherit;font-size:13px;cursor:pointer;padding:8px;}
+
+/* ---------- Nav ---------- */
+#nav{
+  display:flex;justify-content:space-around;align-items:center;
+  padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+  background:rgba(20,16,24,.85);backdrop-filter:blur(16px);border-top:1px solid var(--line);
+  transition:opacity .5s ease,transform .5s ease;
+}
+#nav button{background:none;border:0;color:var(--txt-faint);font-family:inherit;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:600;padding:6px 14px;cursor:pointer;transition:.2s;}
+#nav button .ic{font-size:21px;}
+#nav button.on{color:var(--accent);}
+body.rest #nav button.on{color:var(--rest);}
+
+/* toast */
+#toast-wrap{position:fixed;top:calc(env(safe-area-inset-top) + 14px);left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:50;pointer-events:none;}
+.toast{background:var(--card-2);border:1px solid var(--line);color:var(--txt);padding:11px 18px;border-radius:16px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow);display:flex;gap:9px;align-items:center;animation:tin .4s ease;max-width:88%;}
+.toast.gold{border-color:var(--gold);}
+@keyframes tin{from{opacity:0;transform:translateY(-14px);}to{opacity:1;transform:none;}}
+.toast .e{font-size:18px;}
+
+.hint{text-align:center;font-size:11.5px;color:var(--txt-faint);margin-top:14px;}
+</style>
+</head>
+<body class="focusing">
+<div class="app">
+
+  <!-- Topbar -->
+  <div id="topbar">
+    <div class="brand"><span class="dot"></span> Foco</div>
+    <div class="stats-chip">
+      <span class="chip"><span class="ic">🔥</span><b id="tb-streak">0</b></span>
+      <span class="chip"><span class="ic">🪙</span><b id="tb-coins">0</b></span>
+    </div>
+  </div>
+
+  <main>
+    <!-- ============ TIMER ============ -->
+    <section id="screen-timer" class="active">
+      <div class="phase-tabs">
+        <button data-set="focus" class="on">Foco</button>
+        <button data-set="shortBreak">Descanso</button>
+        <button data-set="longBreak">Descanso largo</button>
+      </div>
+
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 200 200">
+          <defs>
+            <linearGradient id="grad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="var(--accent-2)"/>
+              <stop offset="100%" stop-color="var(--accent)"/>
+            </linearGradient>
+          </defs>
+          <circle class="track" cx="100" cy="100" r="90"/>
+          <circle class="prog" id="ring-prog" cx="100" cy="100" r="90" stroke-dasharray="565.48" stroke-dashoffset="0"/>
+        </svg>
+        <div class="ring-center">
+          <div class="time" id="time">20:00</div>
+          <div class="phase-label" id="phase-label">Concéntrate</div>
+          <div class="overwork-tag" id="ow-tag"></div>
+        </div>
+      </div>
+
+      <div class="set-dots" id="set-dots"></div>
+      <div class="quote" id="quote"></div>
+      <div class="armed" id="armed"></div>
+
+      <div class="controls">
+        <button class="btn btn-round" id="btn-reset" title="Cancelar">✕</button>
+        <button class="btn btn-main" id="btn-main">▶</button>
+        <button class="btn btn-round" id="btn-skip" title="Saltar / Descansar">⏭</button>
+      </div>
+    </section>
+
+    <!-- ============ SHOP ============ -->
+    <section id="screen-shop" class="screen">
+      <div class="h1">Tienda de bonus 🛒</div>
+      <p class="sub">Gasta las fichas 🪙 que ganas concentrándote. Los bonus se guardan en tu mochila hasta que decidas usarlos.</p>
+
+      <div class="level-card">
+        <div class="level-top"><span class="rank" id="rank">Novato</span><span class="lvl" id="lvl">Nivel 1</span></div>
+        <div class="xpbar"><i id="xpfill" style="width:0%"></i></div>
+        <div class="xp-lbl"><span id="xptxt">0 / 100 XP</span><span>🪙 <b id="shop-coins">0</b></span></div>
+      </div>
+
+      <div class="h2">Mochila</div>
+      <div id="bag"></div>
+
+      <div class="h2">Comprar</div>
+      <div id="shop-list"></div>
+    </section>
+
+    <!-- ============ STATS ============ -->
+    <section id="screen-stats" class="screen">
+      <div class="h1">Tu progreso 📊</div>
+      <p class="sub">Cada pomodoro completado suma. Sigue tu constancia día a día.</p>
+
+      <div class="stat-grid">
+        <div class="stat-box hl"><div class="n" id="s-today">0</div><div class="l">Hoy</div></div>
+        <div class="stat-box"><div class="n" id="s-week">0</div><div class="l">Esta semana</div></div>
+        <div class="stat-box"><div class="n" id="s-month">0</div><div class="l">Este mes</div></div>
+        <div class="stat-box"><div class="n" id="s-total">0</div><div class="l">Total</div></div>
+      </div>
+
+      <div class="h2">Constancia</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="n" id="s-streak">0</div><div class="l">Racha actual 🔥</div></div>
+        <div class="stat-box"><div class="n" id="s-best">0</div><div class="l">Mejor racha</div></div>
+        <div class="stat-box"><div class="n" id="s-hours">0h</div><div class="l">Tiempo enfocado</div></div>
+        <div class="stat-box"><div class="n" id="s-over">0</div><div class="l">Sobreesfuerzos ⚡</div></div>
+      </div>
+
+      <div class="h2">Actividad</div>
+      <div class="seg" id="chart-seg">
+        <button data-r="week" class="on">7 días</button>
+        <button data-r="month">30 días</button>
+        <button data-r="year">12 meses</button>
+      </div>
+      <div class="chart" id="chart"></div>
+
+      <div class="h2">Logros</div>
+      <div id="ach-list"></div>
+
+      <div class="h2">Ajustes</div>
+      <div id="settings"></div>
+      <div style="text-align:center"><button class="link-btn" id="reset-all">Borrar todos los datos</button></div>
+      <div class="hint">Consejo: añade esta página a tu pantalla de inicio para usarla como app.</div>
+    </section>
+  </main>
+
+  <!-- Nav -->
+  <nav id="nav">
+    <button data-scr="timer" class="on"><span class="ic">⏱</span>Temporizador</button>
+    <button data-scr="shop"><span class="ic">🛒</span>Tienda</button>
+    <button data-scr="stats"><span class="ic">📊</span>Progreso</button>
+  </nav>
+</div>
+
+<div id="toast-wrap"></div>
+
+<script>
+"use strict";
+/* ================= STORAGE ================= */
+const KEY="focusPomodoro_v1";
+const DEFAULT={
+  coins:0, xp:0, streak:0, bestStreak:0, lastDay:null,
+  totalFocusSec:0, overworkCount:0,
+  sessions:[],           // {ts, sec, over}
+  bag:{},                // bonusId:count
+  armed:{expressCut:0,miniFocus:0,x2:0,doubleBreak:0,instant:0},
+  shield:0,
+  achievements:{},
+  settings:{focus:20, short:5, long:15, longEvery:4, sound:true, autostart:false}
+};
+let D=load();
+function load(){
+  try{const s=JSON.parse(localStorage.getItem(KEY));if(s)return Object.assign(JSON.parse(JSON.stringify(DEFAULT)),s,{settings:Object.assign({},DEFAULT.settings,s.settings),armed:Object.assign({},DEFAULT.armed,s.armed)});}catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT));
+}
+function save(){localStorage.setItem(KEY,JSON.stringify(D));}
+
+/* ================= BONUSES ================= */
+const BONUS=[
+  {id:"expressCut",e:"✂️",name:"Recorte Exprés",cost:50,desc:"Resta 5 min a un foco futuro. Ideal para días flojos."},
+  {id:"miniFocus",e:"🪶",name:"Foco Ligero",cost:120,desc:"El próximo foco dura solo 10 min pero cuenta como uno completo."},
+  {id:"x2",e:"✨",name:"Multiplicador x2",cost:60,desc:"Duplica las fichas y XP que ganes en el próximo foco."},
+  {id:"doubleBreak",e:"🛋️",name:"Descanso Doble",cost:45,desc:"Duplica la duración de tu próximo descanso."},
+  {id:"instant",e:"⚡",name:"Salto Rápido",cost:25,desc:"Termina un descanso al instante cuando ya quieras volver."},
+  {id:"shield",e:"🛡️",name:"Escudo de Racha",cost:90,desc:"Protege tu racha si un día no puedes hacer ningún pomodoro."}
+];
+const ARMABLE={expressCut:1,miniFocus:1,x2:1,doubleBreak:1,instant:1};
+
+/* ================= ACHIEVEMENTS ================= */
+const ACH=[
+  {id:"first",e:"🌱",t:"Primer paso",d:"Completa tu primer pomodoro.",test:d=>d.sessions.length>=1},
+  {id:"four",e:"🍅",t:"Serie completa",d:"Haz 4 pomodoros en un mismo día.",test:d=>maxPerDay(d)>=4},
+  {id:"streak3",e:"🔥",t:"En racha",d:"3 días seguidos concentrándote.",test:d=>d.bestStreak>=3},
+  {id:"streak7",e:"⭐",t:"Semana perfecta",d:"7 días de racha.",test:d=>d.bestStreak>=7},
+  {id:"over5",e:"⚡",t:"Sobreesfuerzo",d:"Aguanta 5 tiempos extra.",test:d=>d.overworkCount>=5},
+  {id:"total25",e:"🏆",t:"Veterano",d:"25 pomodoros en total.",test:d=>d.sessions.length>=25},
+  {id:"total100",e:"👑",t:"Leyenda del foco",d:"100 pomodoros en total.",test:d=>d.sessions.length>=100},
+  {id:"rich",e:"💰",t:"Ahorrador",d:"Acumula 300 fichas.",test:d=>d.coins>=300},
+  {id:"night",e:"🦉",t:"Búho nocturno",d:"Un foco pasada la medianoche.",test:d=>d.sessions.some(s=>{const h=new Date(s.ts).getHours();return h>=0&&h<5;})}
+];
+
+/* ================= QUOTES ================= */
+const QUOTES=[
+ "Un paso ahora vale por diez mañana.","La concentración es un músculo: entrénalo.",
+ "No tienes que ir rápido, solo no parar.","El foco de hoy es la libertad de mañana.",
+ "Hazlo por el que serás dentro de un año.","Lo difícil se vuelve fácil cuando insistes.",
+ "Cada minuto aquí es una inversión en ti.","La disciplina pesa gramos; el arrepentimiento, kilos.",
+ "Respira. Estás exactamente donde debes estar.","Pequeños ladrillos construyen catedrales.",
+ "El silencio también trabaja a tu favor.","Tu yo del futuro te está mirando con orgullo.",
+ "Constancia > intensidad.","Empezar ya es media victoria.",
+ "No cuentes los días, haz que los días cuenten.","La calma es tu superpoder.",
+ "Suelta la prisa, abraza el proceso.","Un pomodoro más y estarás más cerca.",
+ "El talento sin foco se evapora.","Hoy plantas, mañana recoges.",
+ "Menos ruido, más señal.","Lo estás haciendo mejor de lo que crees."
+];
+const RANKS=["Novato","Aprendiz","Constante","Enfocado","Disciplinado","Maestro","Mente Zen","Leyenda"];
+
+/* ================= STATE ================= */
+let S={phase:"focus",status:"idle",cycle:0,endAt:0,remaining:0,extra:0,banked:0};
+const CIRC=565.48;
+let tick=null,quoteTimer=null,revealTimer=null;
+
+/* ================= HELPERS ================= */
+const $=s=>document.querySelector(s);
+const $$=s=>document.querySelectorAll(s);
+function dayKey(ts){const d=new Date(ts);return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();}
+function today(){return dayKey(Date.now());}
+function fmt(sec){sec=Math.max(0,Math.round(sec));const m=Math.floor(sec/60),s=sec%60;return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");}
+function levelFromXP(xp){return Math.floor(xp/100)+1;}
+function maxPerDay(d){const m={};d.sessions.forEach(s=>{const k=dayKey(s.ts);m[k]=(m[k]||0)+1;});return Math.max(0,...Object.values(m));}
+function phaseDurBase(p){return (p==="focus"?D.settings.focus:p==="shortBreak"?D.settings.short:D.settings.long)*60;}
+
+/* compute actual duration applying armed bonuses (without consuming) */
+function plannedDuration(p){
+  let sec=phaseDurBase(p);
+  if(p==="focus"){
+    if(D.armed.miniFocus>0)sec=10*60;
+    else if(D.armed.expressCut>0)sec=Math.max(5*60,sec-5*60);
+  }else{
+    if(D.armed.doubleBreak>0)sec*=2;
+    sec+=S.banked;
+  }
+  return sec;
+}
+
+/* ================= TOAST ================= */
+function toast(msg,emoji="✅",gold=false){
+  const t=document.createElement("div");
+  t.className="toast"+(gold?" gold":"");
+  t.innerHTML=`<span class="e">${emoji}</span><span>${msg}</span>`;
+  $("#toast-wrap").appendChild(t);
+  setTimeout(()=>{t.style.transition="opacity .4s";t.style.opacity="0";setTimeout(()=>t.remove(),400);},2600);
+}
+
+/* ================= SOUND ================= */
+let AC=null;
+function beep(kind){
+  if(!D.settings.sound)return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    const seq=kind==="rest"?[523,659,784]:[784,659,523];
+    seq.forEach((f,i)=>{
+      const o=AC.createOscillator(),g=AC.createGain();
+      o.frequency.value=f;o.type="sine";
+      o.connect(g);g.connect(AC.destination);
+      const t=AC.currentTime+i*0.16;
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.18,t+.03);
+      g.gain.exponentialRampToValueAtTime(.001,t+.32);
+      o.start(t);o.stop(t+.34);
+    });
+  }catch(e){}
+}
+
+/* ================= TIMER CORE ================= */
+function setPhase(p,resetCycleTab){
+  S.phase=p;S.status="idle";S.extra=0;
+  S.remaining=plannedDuration(p);
+  S.endAt=0;
+  updatePhaseUI();renderTimer();updateBodyClass();
+}
+function updatePhaseUI(){
+  $$(".phase-tabs button").forEach(b=>b.classList.toggle("on",b.dataset.set===S.phase));
+}
+function start(){
+  if(S.status==="running")return;
+  if(AC)try{AC.resume();}catch(e){}
+  else if(D.settings.sound){try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+  if(S.status==="idle"){
+    consumeArmedForPhase(S.phase);   // lock bonuses at start
+    S.remaining=S._locked;           // set by consumeArmed
+  }
+  S.status="running";
+  S.endAt=Date.now()+ (S.status==="overwork"?0:S.remaining*1000);
+  if(S.phase==="focus"&&S.remaining<=0){/*safety*/}
+  S.endAt=Date.now()+S.remaining*1000;
+  runLoop();startQuotes();updateBodyClass();renderControls();
+}
+function pause(){
+  if(S.status==="running"){S.remaining=(S.endAt-Date.now())/1000;S.status="paused";}
+  else if(S.status==="overwork"){S.status="overpause";}
+  stopLoop();stopQuotes();updateBodyClass();renderControls();
+}
+function resume(){
+  if(S.status==="paused"){S.status="running";S.endAt=Date.now()+S.remaining*1000;}
+  else if(S.status==="overpause"){S.status="overwork";S._owStart=Date.now()-S.extra*1000;}
+  runLoop();startQuotes();updateBodyClass();renderControls();
+}
+function runLoop(){stopLoop();tick=setInterval(loop,200);loop();}
+function stopLoop(){if(tick){clearInterval(tick);tick=null;}}
+function loop(){
+  if(S.status==="running"){
+    S.remaining=(S.endAt-Date.now())/1000;
+    if(S.remaining<=0){
+      S.remaining=0;
+      if(S.phase==="focus"){enterOverwork();}
+      else{finishBreak();return;}
+    }
+  }else if(S.status==="overwork"){
+    S.extra=(Date.now()-S._owStart)/1000;
+  }
+  renderTimer();
+}
+function enterOverwork(){
+  S.status="overwork";S._owStart=Date.now();S.extra=0;
+  beep("rest");
+  if(navigator.vibrate)navigator.vibrate([90,50,90]);
+  $("#ow-tag").classList.add("show");
+  renderControls();
+}
+/* finishing a FOCUS (from overwork -> user taps break/skip) */
+function completeFocus(){
+  const dur=Math.round(plannedDuration("focus")*0 + S._locked + S.extra);
+  const over=S.extra>3;
+  // rewards
+  let coins=10, xp=Math.round((S._locked)/60);
+  const overSec=Math.floor(S.extra);
+  const overCoins=Math.floor(overSec/30)*2;           // 2 fichas cada 30s extra
+  coins+=overCoins;
+  S.banked=Math.min(300,Math.round(S.extra*0.5));     // banca 0.5s descanso por 1s extra (máx 5min)
+  if(S._x2){coins*=2;xp*=2;}
+  D.coins+=coins;D.xp+=xp;D.totalFocusSec+=dur;
+  if(over)D.overworkCount++;
+  D.sessions.push({ts:Date.now(),sec:dur,over:over});
+  bumpStreak();
+  save();
+  let msg=`+${coins} 🪙  ·  +${xp} XP`;
+  if(overCoins>0)msg=`⚡ +${overCoins} extra! `+msg;
+  toast(msg,over?"⚡":"🍅",over);
+  checkAch();checkLevel();
+  // advance cycle
+  S.cycle++;
+  $("#ow-tag").classList.remove("show");
+  const nextLong = S.cycle % D.settings.longEvery===0;
+  S.extra=0;S._x2=false;
+  setPhase(nextLong?"longBreak":"shortBreak");
+  beep("rest");
+  renderAll();
+  if(D.settings.autostart)start();
+}
+function finishBreak(){
+  stopLoop();stopQuotes();
+  S.banked=0;
+  beep("focus");
+  if(navigator.vibrate)navigator.vibrate(120);
+  toast("¡Descanso terminado! A por otro 💪","🔔");
+  setPhase("focus");
+  renderAll();
+  if(D.settings.autostart)start();
+}
+function cancel(){
+  stopLoop();stopQuotes();
+  $("#ow-tag").classList.remove("show");
+  S.extra=0;S.banked=0;S._x2=false;
+  // refund armed bonuses that were locked but not "consumed" as reward
+  setPhase(S.phase);
+  renderAll();
+}
+
+/* consume armed bonuses at focus/break start; store locked duration */
+function consumeArmedForPhase(p){
+  let sec=phaseDurBase(p);
+  S._x2=false;
+  if(p==="focus"){
+    if(D.armed.miniFocus>0){sec=10*60;D.armed.miniFocus--;toast("🪶 Foco Ligero activo","🪶");}
+    else if(D.armed.expressCut>0){sec=Math.max(5*60,sec-5*60);D.armed.expressCut--;toast("✂️ Recorte Exprés activo","✂️");}
+    if(D.armed.x2>0){S._x2=true;D.armed.x2--;toast("✨ Multiplicador x2 activo","✨");}
+  }else{
+    if(D.armed.doubleBreak>0){sec*=2;D.armed.doubleBreak--;}
+    sec+=S.banked;
+  }
+  S._locked=sec;
+  save();renderArmed();
+}
+
+function bumpStreak(){
+  const t=today();
+  if(D.lastDay===t)return;
+  const y=new Date();y.setDate(y.getDate()-1);
+  if(D.lastDay===dayKey(y.getTime())){D.streak++;}
+  else if(D.lastDay===null){D.streak=1;}
+  else{
+    // gap: use shield?
+    if(D.shield>0){D.shield--;D.streak++;toast("🛡️ Escudo de Racha usado","🛡️");}
+    else D.streak=1;
+  }
+  D.lastDay=t;
+  if(D.streak>D.bestStreak)D.bestStreak=D.streak;
+}
+
+/* streak decay check on load */
+function checkStreakDecay(){
+  if(!D.lastDay)return;
+  const t=today();const y=new Date();y.setDate(y.getDate()-1);const yk=dayKey(y.getTime());
+  if(D.lastDay!==t&&D.lastDay!==yk){
+    if(D.shield>0){D.shield--;D.lastDay=yk;save();toast("🛡️ Tu escudo protegió la racha","🛡️");}
+    else{D.streak=0;save();}
+  }
+}
+
+function checkLevel(){
+  const nl=levelFromXP(D.xp);
+  if(nl>(S._lastLvl||levelFromXP(D.xp-1))){}
+}
+let _lvlShown=null;
+function maybeLevelUp(prevXp){
+  const before=levelFromXP(prevXp),after=levelFromXP(D.xp);
+  if(after>before){toast(`¡Nivel ${after}! ${RANKS[Math.min(after-1,RANKS.length-1)]}`,"🎉",true);}
+}
+function checkAch(){
+  ACH.forEach(a=>{
+    if(!D.achievements[a.id]&&a.test(D)){D.achievements[a.id]=Date.now();save();toast(`Logro: ${a.t}`,a.e,true);}
+  });
+}
+
+/* ================= RENDER ================= */
+function renderTimer(){
+  let disp,total,elapsed;
+  if(S.status==="overwork"||S.status==="overpause"){
+    $("#time").textContent="+"+fmt(S.extra);
+    $("#ring-prog").setAttribute("stroke-dashoffset",0);
+    const b=Math.min(300,Math.round(S.extra*0.5));
+    $("#ow-tag").textContent=`⚡ Tiempo extra · +${Math.floor(S.extra/30)*2} fichas · +${fmt(b)} de descanso`;
+  }else{
+    disp=S.status==="idle"?(S._locked||plannedDuration(S.phase)):S.remaining;
+    $("#time").textContent=fmt(disp);
+    total=(S.status==="idle")?plannedDuration(S.phase):(S._locked||plannedDuration(S.phase));
+    const off=CIRC*(1-Math.max(0,disp)/total);
+    $("#ring-prog").setAttribute("stroke-dashoffset",off);
+  }
+  const labels={focus:"Concéntrate",shortBreak:"Respira",longBreak:"Descanso largo"};
+  $("#phase-label").textContent=labels[S.phase];
+  renderDots();
+}
+function renderDots(){
+  const n=D.settings.longEvery;
+  let h="";
+  for(let i=0;i<n;i++)h+=`<i class="${i<(S.cycle%n)? 'done':''}${(S.cycle%n===0&&S.cycle>0&&i<n)?' done':''}"></i>`;
+  // simpler: done = i < cycle%longEvery (or all if just finished a long)
+  h="";const c=S.cycle%n;
+  for(let i=0;i<n;i++)h+=`<i class="${i<c?'done':''}"></i>`;
+  $("#set-dots").innerHTML=h;
+}
+function renderControls(){
+  const m=$("#btn-main");
+  if(S.status==="running"){m.textContent="⏸";}
+  else if(S.status==="overwork"){m.textContent="⏸";}
+  else if(S.status==="paused"||S.status==="overpause"){m.textContent="▶";}
+  else m.textContent="▶";
+  // skip label
+  $("#btn-skip").textContent=(S.status==="overwork"||S.status==="overpause")?"🛋️":"⏭";
+}
+function renderArmed(){
+  const map={expressCut:"✂️ Recorte",miniFocus:"🪶 Ligero",x2:"✨ x2",doubleBreak:"🛋️ x2 descanso"};
+  let h="";
+  for(const k in map){if(D.armed[k]>0)h+=`<span class="b">${map[k]}${D.armed[k]>1?" ×"+D.armed[k]:""}</span>`;}
+  if(D.shield>0)h+=`<span class="b">🛡️ ×${D.shield}</span>`;
+  $("#armed").innerHTML=h;
+}
+function renderTop(){
+  $("#tb-streak").textContent=D.streak;
+  $("#tb-coins").textContent=D.coins;
+}
+function renderShop(){
+  const lvl=levelFromXP(D.xp),into=D.xp%100;
+  $("#rank").textContent=RANKS[Math.min(lvl-1,RANKS.length-1)];
+  $("#lvl").textContent="Nivel "+lvl;
+  $("#xpfill").style.width=into+"%";
+  $("#xptxt").textContent=into+" / 100 XP";
+  $("#shop-coins").textContent=D.coins;
+  // bag
+  const bag=$("#bag");
+  const owned=BONUS.filter(b=>(D.bag[b.id]||0)>0);
+  if(owned.length===0)bag.innerHTML=`<p class="sub" style="margin:0">Aún no tienes bonus. ¡Compra alguno abajo!</p>`;
+  else bag.innerHTML=owned.map(b=>{
+    const c=D.bag[b.id];
+    const isArmed=ARMABLE[b.id]&&D.armed[b.id]>0;
+    let btn;
+    if(b.id==="shield")btn=`<span class="owned-badge">×${c}</span>`;
+    else btn=`<button class="use ${isArmed?'armed-b':''}" data-use="${b.id}">${isArmed?'✓ Listo':'Activar'}</button>`;
+    return `<div class="item"><div class="emoji">${b.e}</div><div class="info"><div class="name">${b.name} <span class="owned-badge">×${c}</span></div><div class="desc">${b.desc}</div></div><div class="act">${btn}</div></div>`;
+  }).join("");
+  // shop
+  $("#shop-list").innerHTML=BONUS.map(b=>{
+    const can=D.coins>=b.cost;
+    return `<div class="item"><div class="emoji">${b.e}</div><div class="info"><div class="name">${b.name}</div><div class="desc">${b.desc}</div></div><div class="act"><button class="buy" data-buy="${b.id}" ${can?'':'disabled'}>🪙 ${b.cost}</button></div></div>`;
+  }).join("");
+}
+function renderStats(){
+  const s=D.sessions;
+  const t=today();
+  const todayN=s.filter(x=>dayKey(x.ts)===t).length;
+  const now=Date.now();
+  const weekN=s.filter(x=>now-x.ts<7*864e5).length;
+  const d=new Date();const monN=s.filter(x=>{const dd=new Date(x.ts);return dd.getMonth()===d.getMonth()&&dd.getFullYear()===d.getFullYear();}).length;
+  $("#s-today").textContent=todayN;
+  $("#s-week").textContent=weekN;
+  $("#s-month").textContent=monN;
+  $("#s-total").textContent=s.length;
+  $("#s-streak").textContent=D.streak;
+  $("#s-best").textContent=D.bestStreak;
+  $("#s-hours").textContent=(D.totalFocusSec/3600).toFixed(1)+"h";
+  $("#s-over").textContent=D.overworkCount;
+  renderChart(window._chartRange||"week");
+  // achievements
+  $("#ach-list").innerHTML=ACH.map(a=>{
+    const got=D.achievements[a.id];
+    return `<div class="ach ${got?'got':''}"><span class="e">${got?a.e:'🔒'}</span><div><div class="t">${a.t}</div><div class="d">${a.d}</div></div></div>`;
+  }).join("");
+  renderSettings();
+}
+function renderChart(range){
+  window._chartRange=range;
+  $$("#chart-seg button").forEach(b=>b.classList.toggle("on",b.dataset.r===range));
+  const s=D.sessions,now=new Date();let bins=[];
+  if(range==="week"){
+    for(let i=6;i>=0;i--){const dd=new Date();dd.setDate(now.getDate()-i);const k=dayKey(dd.getTime());
+      bins.push({lb:["D","L","M","X","J","V","S"][dd.getDay()],v:s.filter(x=>dayKey(x.ts)===k).length,today:k===today()});}
+  }else if(range==="month"){
+    for(let i=29;i>=0;i--){const dd=new Date();dd.setDate(now.getDate()-i);const k=dayKey(dd.getTime());
+      bins.push({lb:i%5===0?String(dd.getDate()):"",v:s.filter(x=>dayKey(x.ts)===k).length,today:k===today()});}
+  }else{
+    for(let i=11;i>=0;i--){const dd=new Date(now.getFullYear(),now.getMonth()-i,1);
+      bins.push({lb:["E","F","M","A","M","J","J","A","S","O","N","D"][dd.getMonth()],
+        v:s.filter(x=>{const xx=new Date(x.ts);return xx.getMonth()===dd.getMonth()&&xx.getFullYear()===dd.getFullYear();}).length,
+        today:dd.getMonth()===now.getMonth()&&dd.getFullYear()===now.getFullYear()});}
+  }
+  const max=Math.max(1,...bins.map(b=>b.v));
+  $("#chart").innerHTML=bins.map(b=>`<div class="bar ${b.today?'today':''}"><div class="vv">${b.v||''}</div><div class="fill" style="height:${(b.v/max)*100}%"></div><div class="lb">${b.lb}</div></div>`).join("");
+}
+function renderSettings(){
+  const st=D.settings;
+  const step=(lab,key,min,max,unit)=>`<div class="row"><div><div class="lab">${lab}</div><div class="sml">${st[key]} ${unit}</div></div><div class="stepper"><button data-dec="${key}" data-min="${min}">−</button><b>${st[key]}</b><button data-inc="${key}" data-max="${max}">+</button></div></div>`;
+  $("#settings").innerHTML=
+    step("Duración del foco","focus",5,60,"min")+
+    step("Descanso corto","short",1,30,"min")+
+    step("Descanso largo","long",5,45,"min")+
+    step("Descanso largo cada","longEvery",2,8,"pomodoros")+
+    `<div class="row"><div><div class="lab">Sonido al terminar</div><div class="sml">Aviso sonoro suave</div></div><div class="switch ${st.sound?'on':''}" data-sw="sound"><i></i></div></div>`+
+    `<div class="row"><div><div class="lab">Encadenar automático</div><div class="sml">Empieza foco/descanso solo</div></div><div class="switch ${st.autostart?'on':''}" data-sw="autostart"><i></i></div></div>`;
+}
+function renderAll(){renderTimer();renderControls();renderArmed();renderTop();renderShop();renderStats();updateBodyClass();}
+
+function updateBodyClass(){
+  document.body.classList.toggle("rest",S.phase!=="focus");
+  document.body.classList.toggle("focusing",S.phase==="focus");
+  document.body.classList.toggle("running",S.status==="running"||S.status==="overwork");
+}
+
+/* ================= QUOTES ================= */
+function startQuotes(){
+  stopQuotes();showQuote();
+  quoteTimer=setInterval(showQuote,13000);
+}
+function stopQuotes(){if(quoteTimer){clearInterval(quoteTimer);quoteTimer=null;}$("#quote").classList.remove("show");}
+function showQuote(){
+  const q=$("#quote");q.classList.remove("show");
+  setTimeout(()=>{q.textContent="“"+QUOTES[Math.floor(Math.random()*QUOTES.length)]+"”";q.classList.add("show");},400);
+}
+
+/* ================= EVENTS ================= */
+$("#btn-main").onclick=()=>{
+  if(S.status==="idle")start();
+  else if(S.status==="running"||S.status==="overwork")pause();
+  else resume();
+};
+$("#btn-reset").onclick=()=>{
+  if(S.status!=="idle"){cancel();toast("Temporizador cancelado","✕");}
+};
+$("#btn-skip").onclick=()=>{
+  if(S.status==="overwork"||S.status==="overpause"){completeFocus();}
+  else if(S.phase==="focus"&&(S.status==="running"||S.status==="paused")){
+    // end focus early -> counts as completed with current elapsed
+    S._locked=S._locked||plannedDuration("focus");
+    S.extra=0;completeFocus();
+  }else if(S.phase!=="focus"){finishBreak();}
+  else{ // idle focus skip -> go to break without reward
+    S.cycle++;const nl=S.cycle%D.settings.longEvery===0;setPhase(nl?"longBreak":"shortBreak");renderAll();
+  }
+};
+$$(".phase-tabs button").forEach(b=>b.onclick=()=>{
+  if(S.status!=="idle"){toast("Cancela el temporizador para cambiar","ℹ️");return;}
+  S.cycle=S.cycle; setPhase(b.dataset.set);renderAll();
+});
+// nav
+$$("#nav button").forEach(b=>b.onclick=()=>{
+  const scr=b.dataset.scr;
+  $$("#nav button").forEach(x=>x.classList.toggle("on",x===b));
+  $$("main .screen, #screen-timer").forEach(s=>s.classList.remove("active"));
+  $("#screen-"+scr).classList.add("active");
+  if(scr==="shop")renderShop();
+  if(scr==="stats")renderStats();
+});
+// reveal controls on tap during focus
+document.addEventListener("click",()=>{
+  if(document.body.classList.contains("focusing")&&document.body.classList.contains("running")){
+    document.body.classList.add("reveal");
+    clearTimeout(revealTimer);
+    revealTimer=setTimeout(()=>document.body.classList.remove("reveal"),3500);
+  }
+});
+// shop delegation
+$("#shop-list").addEventListener("click",e=>{
+  const b=e.target.closest("[data-buy]");if(!b)return;
+  const id=b.dataset.buy,bo=BONUS.find(x=>x.id===id);
+  if(D.coins<bo.cost)return;
+  D.coins-=bo.cost;D.bag[id]=(D.bag[id]||0)+1;
+  if(id==="shield")D.shield++;
+  save();toast(`Comprado: ${bo.name}`,bo.e);
+  renderShop();renderTop();checkAch();
+});
+$("#bag").addEventListener("click",e=>{
+  const u=e.target.closest("[data-use]");if(!u)return;
+  const id=u.dataset.use;
+  if((D.bag[id]||0)<=0)return;
+  if(id==="instant"){
+    if(S.phase!=="focus"&&(S.status==="running"||S.status==="paused")){D.bag.instant--;D.armed.instant=0;save();finishBreak();toast("⚡ Descanso saltado","⚡");}
+    else toast("Úsalo durante un descanso","ℹ️");
+    renderShop();return;
+  }
+  // arm it
+  D.bag[id]--;D.armed[id]=(D.armed[id]||0)+1;
+  save();renderShop();renderArmed();
+  toast("Bonus preparado para tu próximo turno","👍");
+});
+// chart seg
+$("#chart-seg").addEventListener("click",e=>{const b=e.target.closest("button");if(b)renderChart(b.dataset.r);});
+// settings
+$("#settings").addEventListener("click",e=>{
+  const inc=e.target.closest("[data-inc]"),dec=e.target.closest("[data-dec]"),sw=e.target.closest("[data-sw]");
+  if(inc){const k=inc.dataset.inc;D.settings[k]=Math.min(+inc.dataset.max,D.settings[k]+1);}
+  if(dec){const k=dec.dataset.dec;D.settings[k]=Math.max(+dec.dataset.min,D.settings[k]-1);}
+  if(sw){const k=sw.dataset.sw;D.settings[k]=!D.settings[k];}
+  if(inc||dec||sw){save();renderSettings();if(S.status==="idle")setPhase(S.phase),renderTimer();}
+});
+$("#reset-all").onclick=()=>{
+  if(confirm("¿Borrar TODO tu progreso, fichas, bonus y estadísticas? No se puede deshacer.")){
+    localStorage.removeItem(KEY);D=load();S={phase:"focus",status:"idle",cycle:0,endAt:0,remaining:0,extra:0,banked:0};
+    setPhase("focus");renderAll();toast("Datos borrados","🧹");
+  }
+};
+// keyboard (desktop)
+document.addEventListener("keydown",e=>{if(e.code==="Space"){e.preventDefault();$("#btn-main").click();}});
+// wrap XP level toast
+const _origPush=Array.prototype.push;
+// track level ups
+(function(){const _cf=completeFocus;})();
+
+/* ================= INIT ================= */
+checkStreakDecay();
+setPhase("focus");
+renderAll();
+showQuote();
+// intercept xp changes for level-up toast
+let _prevLvl=levelFromXP(D.xp);
+setInterval(()=>{const l=levelFromXP(D.xp);if(l>_prevLvl){toast(`¡Subiste a Nivel ${l}! ${RANKS[Math.min(l-1,RANKS.length-1)]}`,"🎉",true);_prevLvl=l;}},1000);
+</script>
+</body>
+</html>
