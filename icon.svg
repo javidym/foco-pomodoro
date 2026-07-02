@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="41%" r="62%">
+      <stop offset="0%" stop-color="#2c2138"/>
+      <stop offset="100%" stop-color="#141018"/>
+    </radialGradient>
+    <linearGradient id="ring" x1="120" y1="120" x2="392" y2="392" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffd54a"/>
+      <stop offset="55%" stop-color="#ffab40"/>
+      <stop offset="100%" stop-color="#ff7a3d"/>
+    </linearGradient>
+    <radialGradient id="dot" cx="46%" cy="43%" r="58%">
+      <stop offset="0%" stop-color="#fff6cf"/>
+      <stop offset="40%" stop-color="#ffde59"/>
+      <stop offset="100%" stop-color="#ffb000"/>
+    </radialGradient>
+    <filter id="glowRing" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="0" stdDev="13" flood-color="#ffa840" flood-opacity="0.55"/>
+    </filter>
+    <filter id="glowDot" x="-80%" y="-80%" width="260%" height="260%">
+      <feDropShadow dx="0" dy="0" stdDev="17" flood-color="#ffd250" flood-opacity="0.85"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="#141018"/>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="url(#ring)" stroke-width="30"
+          stroke-linecap="round" stroke-dasharray="872 70" stroke-dashoffset="35"
+          transform="rotate(-90 256 256)" filter="url(#glowRing)"/>
+  <circle cx="256" cy="256" r="60" fill="url(#dot)" filter="url(#glowDot)"/>
+</svg>
