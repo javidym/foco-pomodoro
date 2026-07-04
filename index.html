@@ -25,6 +25,7 @@
   --txt-faint:#6f6580;
   --accent:#ff7a59;        /* foco (ámbar/coral) */
   --accent-2:#ffb47a;
+  --accent-b:#ff5f7a;      /* segundo tono de los degradados (cambia con el tema) */
   --rest:#48d1a8;          /* descanso (verde menta) */
   --rest-2:#8ff0d3;
   --gold:#ffcf6b;
@@ -44,6 +45,15 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 body.rest{background:radial-gradient(120% 100% at 50% -10%,#10302a 0%,#0f1a18 55%);}
+/* ---------- Temas (skins) ---------- */
+body[data-skin="bosque"]{--accent:#3fb98f;--accent-2:#8ff0d3;--accent-b:#2fb5a0;}
+body[data-skin="oceano"]{--accent:#3d9bff;--accent-2:#9ccaff;--accent-b:#4d6dff;}
+body[data-skin="medianoche"]{--accent:#8a7dff;--accent-2:#c3b8ff;--accent-b:#6d5cff;}
+body[data-skin="oro"]{--accent:#ffc23d;--accent-2:#ffe6a8;--accent-b:#ff9d2e;}
+body[data-skin="bosque"]:not(.rest){background:radial-gradient(120% 100% at 50% -10%,#123028 0%,#0f1a17 55%);}
+body[data-skin="oceano"]:not(.rest){background:radial-gradient(120% 100% at 50% -10%,#152740 0%,#0e131c 55%);}
+body[data-skin="medianoche"]:not(.rest){background:radial-gradient(120% 100% at 50% -10%,#221f3a 0%,#0f0e18 55%);}
+body[data-skin="oro"]:not(.rest){background:radial-gradient(120% 100% at 50% -10%,#302614 0%,#16110a 55%);}
 body.focusing.running #topbar,body.focusing.running #nav{opacity:0;pointer-events:none;transform:translateY(-6px);}
 body.focusing.running.reveal #topbar,body.focusing.running.reveal #nav{opacity:1;pointer-events:auto;transform:none;}
 
@@ -111,7 +121,7 @@ body.rest .phase-label{color:var(--rest-2);}
 .btn{border:0;font-family:inherit;cursor:pointer;transition:transform .12s ease,filter .2s;}
 .btn:active{transform:scale(.93);}
 .btn-main{
-  width:80px;height:80px;border-radius:50%;background:linear-gradient(150deg,var(--accent),#ff5f7a);
+  width:80px;height:80px;border-radius:50%;background:linear-gradient(150deg,var(--accent),var(--accent-b));
   color:#fff;font-size:30px;display:flex;align-items:center;justify-content:center;
   box-shadow:0 14px 34px -10px rgba(255,122,89,.7);
 }
@@ -150,7 +160,7 @@ body.rest .set-dots i.done{background:var(--rest);box-shadow:0 0 8px var(--rest)
 .buy:active{transform:scale(.93);}
 .buy:disabled{opacity:.4;color:var(--txt-faint);}
 .owned-badge{background:var(--accent);color:#fff;border-radius:11px;min-width:22px;height:22px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
-.use{background:linear-gradient(150deg,var(--accent),#ff5f7a);border:0;color:#fff;font-weight:700;font-size:13px;padding:9px 15px;border-radius:12px;font-family:inherit;cursor:pointer;}
+.use{background:linear-gradient(150deg,var(--accent),var(--accent-b));border:0;color:#fff;font-weight:700;font-size:13px;padding:9px 15px;border-radius:12px;font-family:inherit;cursor:pointer;}
 .use:active{transform:scale(.93);}
 .use.armed-b{background:var(--card-2);color:var(--rest);border:1px solid var(--rest);}
 
@@ -163,7 +173,7 @@ body.rest .set-dots i.done{background:var(--rest);box-shadow:0 0 8px var(--rest)
 .stat-box.hl .n{color:var(--accent-2);}
 .chart{display:flex;align-items:flex-end;gap:6px;height:130px;padding:14px 4px 0;background:var(--card);border:1px solid var(--line);border-radius:18px;}
 .bar{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end;}
-.bar .fill{width:100%;max-width:26px;background:linear-gradient(180deg,var(--accent),#ff5f7a);border-radius:6px 6px 3px 3px;min-height:3px;transition:height .6s;}
+.bar .fill{width:100%;max-width:26px;background:linear-gradient(180deg,var(--accent),var(--accent-b));border-radius:6px 6px 3px 3px;min-height:3px;transition:height .6s;}
 .bar.today .fill{background:linear-gradient(180deg,var(--gold),var(--accent));}
 .bar .lb{font-size:10px;color:var(--txt-faint);}
 .bar .vv{font-size:10px;color:var(--txt-dim);font-weight:700;height:12px;}
@@ -277,8 +287,14 @@ body.rest #nav button.on{color:var(--rest);}
       <div class="h2">Mochila</div>
       <div id="bag"></div>
 
-      <div class="h2">Comprar</div>
+      <div class="h2">Bonus <span style="color:var(--txt-faint);font-weight:600;text-transform:none;letter-spacing:0">· cuestan esfuerzo</span></div>
       <div id="shop-list"></div>
+
+      <div class="h2">Sorpresa</div>
+      <div id="shop-fun"></div>
+
+      <div class="h2">Temas <span style="color:var(--txt-faint);font-weight:600;text-transform:none;letter-spacing:0">· recompensa de prestigio</span></div>
+      <div id="skins"></div>
     </section>
 
     <!-- ============ STATS ============ -->
@@ -347,13 +363,14 @@ body.rest #nav button.on{color:var(--rest);}
 const KEY="focusPomodoro_v1";
 const DEFAULT={
   coins:0, xp:0, streak:0, bestStreak:0, lastDay:null,
-  totalFocusSec:0, overworkCount:0,
+  totalFocusSec:0, overworkCount:0, goalsHit:0, lastGoalDay:null,
   sessions:[],           // {ts, sec, over}
   bag:{},                // bonusId:count
   armed:{expressCut:0,miniFocus:0,x2:0,doubleBreak:0,instant:0},
   shield:0,
+  skin:"amanecer", skinsOwned:["amanecer"],
   achievements:{},
-  settings:{focus:20, short:5, long:15, longEvery:4, sound:true, autostart:false}
+  settings:{focus:20, short:5, long:15, longEvery:4, dailyGoal:6, sound:true, autostart:false}
 };
 let D=load();
 function load(){
@@ -364,12 +381,25 @@ function save(){localStorage.setItem(KEY,JSON.stringify(D));}
 
 /* ================= BONUSES ================= */
 const BONUS=[
-  {id:"expressCut",e:"✂️",name:"Recorte Exprés",cost:50,desc:"Resta 5 min a un foco futuro. Ideal para días flojos."},
-  {id:"miniFocus",e:"🪶",name:"Foco Ligero",cost:120,desc:"El próximo foco dura solo 10 min pero cuenta como uno completo."},
-  {id:"x2",e:"✨",name:"Multiplicador x2",cost:60,desc:"Duplica las fichas y XP que ganes en el próximo foco."},
-  {id:"doubleBreak",e:"🛋️",name:"Descanso Doble",cost:45,desc:"Duplica la duración de tu próximo descanso."},
-  {id:"instant",e:"⚡",name:"Salto Rápido",cost:25,desc:"Termina un descanso al instante cuando ya quieras volver."},
-  {id:"shield",e:"🛡️",name:"Escudo de Racha",cost:90,desc:"Protege tu racha si un día no puedes hacer ningún pomodoro."}
+  {id:"expressCut",e:"✂️",name:"Recorte Exprés",cost:70,desc:"Resta 5 min a un foco futuro. Un respiro para días flojos."},
+  {id:"miniFocus",e:"🪶",name:"Foco Ligero",cost:220,desc:"El próximo foco dura solo 10 min pero cuenta como uno completo."},
+  {id:"x2",e:"✨",name:"Multiplicador x2",cost:95,desc:"Duplica las fichas y XP que ganes en el próximo foco."},
+  {id:"doubleBreak",e:"🛋️",name:"Descanso Doble",cost:60,desc:"Duplica la duración de tu próximo descanso."},
+  {id:"instant",e:"⚡",name:"Salto Rápido",cost:40,desc:"Termina un descanso al instante cuando ya quieras volver."},
+  {id:"shield",e:"🛡️",name:"Escudo de Racha",cost:160,desc:"Protege tu racha si un día no puedes hacer ningún pomodoro."}
+];
+// items de compra instantánea (no van a la mochila)
+const FUN=[
+  {id:"chest",e:"🎁",name:"Cofre Misterioso",cost:50,desc:"Ábrelo y llévate una recompensa al azar: fichas o un bonus sorpresa."},
+  {id:"gamble",e:"🎲",name:"Doble o Nada",cost:40,desc:"50% de duplicar tu apuesta (te devuelve 80) y 50% de perderla. ¿Te atreves?"}
+];
+// temas cosméticos (sumidero de prestigio, no dan tiempo libre)
+const SKINS=[
+  {id:"amanecer",e:"🌅",name:"Amanecer",cost:0,desc:"El tema original, cálido y ámbar."},
+  {id:"bosque",e:"🌲",name:"Bosque",cost:180,desc:"Verde menta, sereno y natural."},
+  {id:"oceano",e:"🌊",name:"Océano",cost:320,desc:"Azul profundo y tranquilo."},
+  {id:"medianoche",e:"🌌",name:"Medianoche",cost:500,desc:"Violeta nocturno, para sesiones largas."},
+  {id:"oro",e:"👑",name:"Oro",cost:900,desc:"Dorado de lujo. Solo para veteranos del foco."}
 ];
 const ARMABLE={expressCut:1,miniFocus:1,x2:1,doubleBreak:1,instant:1};
 
@@ -380,9 +410,19 @@ const ACH=[
   {id:"streak3",e:"🔥",t:"En racha",d:"3 días seguidos concentrándote.",test:d=>d.bestStreak>=3},
   {id:"streak7",e:"⭐",t:"Semana perfecta",d:"7 días de racha.",test:d=>d.bestStreak>=7},
   {id:"over5",e:"⚡",t:"Sobreesfuerzo",d:"Aguanta 5 tiempos extra.",test:d=>d.overworkCount>=5},
+  {id:"over20",e:"🔥",t:"Máquina imparable",d:"20 tiempos extra en total.",test:d=>d.overworkCount>=20},
+  {id:"day8",e:"💪",t:"Jornada dura",d:"8 pomodoros en un mismo día.",test:d=>maxPerDay(d)>=8},
+  {id:"goal",e:"🎯",t:"Objetivo cumplido",d:"Alcanza tu meta diaria.",test:d=>(d.goalsHit||0)>=1},
+  {id:"goal10",e:"📌",t:"Diez metas",d:"Cumple la meta diaria 10 veces.",test:d=>(d.goalsHit||0)>=10},
+  {id:"streak14",e:"🌟",t:"Dos semanas",d:"14 días seguidos.",test:d=>d.bestStreak>=14},
+  {id:"streak30",e:"🏅",t:"Un mes imparable",d:"30 días de racha.",test:d=>d.bestStreak>=30},
+  {id:"week30",e:"📚",t:"Semana de opositor",d:"30 pomodoros en 7 días.",test:d=>{const n=Date.now();return d.sessions.filter(s=>n-s.ts<7*864e5).length>=30;}},
+  {id:"hours10",e:"⏳",t:"Diez horas",d:"10 h enfocado en total.",test:d=>d.totalFocusSec>=36000},
+  {id:"hours50",e:"🧠",t:"Cincuenta horas",d:"50 h enfocado en total.",test:d=>d.totalFocusSec>=180000},
   {id:"total25",e:"🏆",t:"Veterano",d:"25 pomodoros en total.",test:d=>d.sessions.length>=25},
   {id:"total100",e:"👑",t:"Leyenda del foco",d:"100 pomodoros en total.",test:d=>d.sessions.length>=100},
-  {id:"rich",e:"💰",t:"Ahorrador",d:"Acumula 300 fichas.",test:d=>d.coins>=300},
+  {id:"style",e:"🎨",t:"Con estilo",d:"Desbloquea un tema nuevo.",test:d=>(d.skinsOwned||[]).length>=2},
+  {id:"rich",e:"💰",t:"Ahorrador",d:"Acumula 500 fichas.",test:d=>d.coins>=500},
   {id:"night",e:"🦉",t:"Búho nocturno",d:"Un foco pasada la medianoche.",test:d=>d.sessions.some(s=>{const h=new Date(s.ts).getHours();return h>=0&&h<5;})}
 ];
 
@@ -400,7 +440,7 @@ const QUOTES=[
  "El talento sin foco se evapora.","Hoy plantas, mañana recoges.",
  "Menos ruido, más señal.","Lo estás haciendo mejor de lo que crees."
 ];
-const RANKS=["Novato","Aprendiz","Constante","Enfocado","Disciplinado","Maestro","Mente Zen","Leyenda"];
+const RANKS=["Novato","Aprendiz","Constante","Enfocado","Disciplinado","Tenaz","Maestro","Sabio","Mente Zen","Leyenda"];
 
 /* ================= STATE ================= */
 let S={phase:"focus",status:"idle",cycle:0,endAt:0,remaining:0,extra:0,banked:0};
@@ -413,7 +453,10 @@ const $$=s=>document.querySelectorAll(s);
 function dayKey(ts){const d=new Date(ts);return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate();}
 function today(){return dayKey(Date.now());}
 function fmt(sec){sec=Math.max(0,Math.round(sec));const m=Math.floor(sec/60),s=sec%60;return String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");}
-function levelFromXP(xp){return Math.floor(xp/100)+1;}
+// XP = minutos enfocados. Curva creciente: cada nivel cuesta más.
+function xpForLevel(L){return 50*(L-1)*(L-1);}     // niv2=50, niv3=200, niv4=450, niv5=800...
+function levelFromXP(xp){return Math.floor(Math.sqrt(Math.max(0,xp)/50))+1;}
+function levelInfo(xp){const L=levelFromXP(xp),c=xpForLevel(L),n=xpForLevel(L+1);return{level:L,into:xp-c,need:n-c};}
 function maxPerDay(d){const m={};d.sessions.forEach(s=>{const k=dayKey(s.ts);m[k]=(m[k]||0)+1;});return Math.max(0,...Object.values(m));}
 function phaseDurBase(p){return (p==="focus"?D.settings.focus:p==="shortBreak"?D.settings.short:D.settings.long)*60;}
 
@@ -475,6 +518,7 @@ function start(){
   if(S.status==="idle"){
     consumeArmedForPhase(S.phase);   // lock bonuses at start
     S.remaining=S._locked;           // set by consumeArmed
+    if(S.phase==="focus")S._clean=true;   // foco sin pausas ni saltos
   }
   S.status="running";
   S.endAt=Date.now()+ (S.status==="overwork"?0:S.remaining*1000);
@@ -483,7 +527,7 @@ function start(){
   runLoop();startQuotes();updateBodyClass();renderControls();
 }
 function pause(){
-  if(S.status==="running"){S.remaining=(S.endAt-Date.now())/1000;S.status="paused";}
+  if(S.status==="running"){S.remaining=(S.endAt-Date.now())/1000;S.status="paused";if(S.phase==="focus")S._clean=false;}
   else if(S.status==="overwork"){S.status="overpause";}
   stopLoop();stopQuotes();updateBodyClass();renderControls();
 }
@@ -518,22 +562,34 @@ function enterOverwork(){
 function completeFocus(){
   const dur=Math.round(plannedDuration("focus")*0 + S._locked + S.extra);
   const over=S.extra>3;
-  // rewards
-  let coins=10, xp=Math.round((S._locked)/60);
-  const overSec=Math.floor(S.extra);
-  const overCoins=Math.floor(overSec/30)*2;           // 2 fichas cada 30s extra
-  coins+=overCoins;
-  S.banked=Math.min(300,Math.round(S.extra*0.5));     // banca 0.5s descanso por 1s extra (máx 5min)
+  // ---- Economía (los puntos cuestan: estudiar es el objetivo) ----
+  const focusMin=S._locked/60;
+  const base=Math.max(1,Math.round(focusMin/5));       // ~4 por un foco de 20 min
+  const cleanBonus=S._clean?2:0;                        // foco limpio, sin pausas
+  const overMin=Math.floor(S.extra/60);
+  const overCoins=Math.min(10,overMin);                // +1 por minuto extra, máx +10
+  const streakMult=1+0.03*Math.min(D.streak,10);       // hasta x1.3 por constancia
+  let coins=Math.round((base+cleanBonus+overCoins)*streakMult);
+  let xp=Math.round(focusMin);
+  S.banked=Math.min(300,Math.round(S.extra*0.5));      // banca 0.5s descanso por 1s extra (máx 5min)
   if(S._x2){coins*=2;xp*=2;}
   D.coins+=coins;D.xp+=xp;D.totalFocusSec+=dur;
   if(over)D.overworkCount++;
   D.sessions.push({ts:Date.now(),sec:dur,over:over});
   bumpStreak();
+  // ---- Meta diaria ----
+  let goalMsg="";
+  const todayCount=D.sessions.filter(s=>dayKey(s.ts)===today()).length;
+  if(todayCount>=D.settings.dailyGoal && D.lastGoalDay!==today()){
+    D.lastGoalDay=today();D.goalsHit=(D.goalsHit||0)+1;D.coins+=10;
+    goalMsg=" · 🎯 ¡Meta diaria! +10";
+  }
   save();
-  let msg=`+${coins} 🪙  ·  +${xp} XP`;
-  if(overCoins>0)msg=`⚡ +${overCoins} extra! `+msg;
-  toast(msg,over?"⚡":"🍅",over);
-  checkAch();checkLevel();
+  let msg=`+${coins} 🪙 · +${xp} XP`;
+  if(overCoins>0)msg=`⚡+${overCoins} `+msg;
+  if(cleanBonus)msg+=" ✨";
+  toast(msg+goalMsg,over?"⚡":"🍅",over||!!goalMsg);
+  checkAch();
   // advance cycle
   S.cycle++;
   $("#ow-tag").classList.remove("show");
@@ -626,7 +682,7 @@ function renderTimer(){
     $("#time").textContent="+"+fmt(S.extra);
     $("#ring-prog").setAttribute("stroke-dashoffset",0);
     const b=Math.min(300,Math.round(S.extra*0.5));
-    $("#ow-tag").textContent=`⚡ Tiempo extra · +${Math.floor(S.extra/30)*2} fichas · +${fmt(b)} de descanso`;
+    $("#ow-tag").textContent=`⚡ Tiempo extra · +${Math.min(10,Math.floor(S.extra/60))} fichas · +${fmt(b)} de descanso`;
   }else{
     disp=S.status==="idle"?(S._locked||plannedDuration(S.phase)):S.remaining;
     $("#time").textContent=fmt(disp);
@@ -668,11 +724,11 @@ function renderTop(){
   $("#tb-coins").textContent=D.coins;
 }
 function renderShop(){
-  const lvl=levelFromXP(D.xp),into=D.xp%100;
-  $("#rank").textContent=RANKS[Math.min(lvl-1,RANKS.length-1)];
-  $("#lvl").textContent="Nivel "+lvl;
-  $("#xpfill").style.width=into+"%";
-  $("#xptxt").textContent=into+" / 100 XP";
+  const li=levelInfo(D.xp);
+  $("#rank").textContent=RANKS[Math.min(li.level-1,RANKS.length-1)];
+  $("#lvl").textContent="Nivel "+li.level;
+  $("#xpfill").style.width=Math.round(li.into/li.need*100)+"%";
+  $("#xptxt").textContent=li.into+" / "+li.need+" XP";
   $("#shop-coins").textContent=D.coins;
   // bag
   const bag=$("#bag");
@@ -686,12 +742,25 @@ function renderShop(){
     else btn=`<button class="use ${isArmed?'armed-b':''}" data-use="${b.id}">${isArmed?'✓ Listo':'Activar'}</button>`;
     return `<div class="item"><div class="emoji">${b.e}</div><div class="info"><div class="name">${b.name} <span class="owned-badge">×${c}</span></div><div class="desc">${b.desc}</div></div><div class="act">${btn}</div></div>`;
   }).join("");
-  // shop
-  $("#shop-list").innerHTML=BONUS.map(b=>{
+  // shop bonus
+  const itemHTML=b=>{
     const can=D.coins>=b.cost;
     return `<div class="item"><div class="emoji">${b.e}</div><div class="info"><div class="name">${b.name}</div><div class="desc">${b.desc}</div></div><div class="act"><button class="buy" data-buy="${b.id}" ${can?'':'disabled'}>🪙 ${b.cost}</button></div></div>`;
+  };
+  $("#shop-list").innerHTML=BONUS.map(itemHTML).join("");
+  $("#shop-fun").innerHTML=FUN.map(itemHTML).join("");
+  // temas
+  $("#skins").innerHTML=SKINS.map(sk=>{
+    const owned=(D.skinsOwned||[]).includes(sk.id);
+    const eq=D.skin===sk.id;
+    let btn;
+    if(eq)btn=`<button class="use armed-b" disabled>✓ Puesto</button>`;
+    else if(owned)btn=`<button class="use" data-skin="${sk.id}">Poner</button>`;
+    else{const can=D.coins>=sk.cost;btn=`<button class="buy" data-skinbuy="${sk.id}" ${can?'':'disabled'}>🪙 ${sk.cost}</button>`;}
+    return `<div class="item"><div class="emoji">${sk.e}</div><div class="info"><div class="name">${sk.name}</div><div class="desc">${sk.desc}</div></div><div class="act">${btn}</div></div>`;
   }).join("");
 }
+function applySkin(id){document.body.dataset.skin=id;}
 function renderStats(){
   const s=D.sessions;
   const t=today();
@@ -700,6 +769,8 @@ function renderStats(){
   const weekN=s.filter(x=>now-x.ts<7*864e5).length;
   const d=new Date();const monN=s.filter(x=>{const dd=new Date(x.ts);return dd.getMonth()===d.getMonth()&&dd.getFullYear()===d.getFullYear();}).length;
   $("#s-today").textContent=todayN;
+  const goalLbl=$("#s-today").nextElementSibling;
+  if(goalLbl)goalLbl.textContent=todayN>=D.settings.dailyGoal?`Hoy · meta ✓`:`Hoy · meta ${D.settings.dailyGoal}`;
   $("#s-week").textContent=weekN;
   $("#s-month").textContent=monN;
   $("#s-total").textContent=s.length;
@@ -738,6 +809,7 @@ function renderSettings(){
   const st=D.settings;
   const step=(lab,key,min,max,unit)=>`<div class="row"><div><div class="lab">${lab}</div><div class="sml">${st[key]} ${unit}</div></div><div class="stepper"><button data-dec="${key}" data-min="${min}">−</button><b>${st[key]}</b><button data-inc="${key}" data-max="${max}">+</button></div></div>`;
   $("#settings").innerHTML=
+    step("Meta diaria","dailyGoal",1,20,"pomodoros")+
     step("Duración del foco","focus",5,60,"min")+
     step("Descanso corto","short",1,30,"min")+
     step("Descanso largo","long",5,45,"min")+
@@ -778,7 +850,7 @@ $("#btn-skip").onclick=()=>{
   else if(S.phase==="focus"&&(S.status==="running"||S.status==="paused")){
     // end focus early -> counts as completed with current elapsed
     S._locked=S._locked||plannedDuration("focus");
-    S.extra=0;completeFocus();
+    S.extra=0;S._clean=false;completeFocus();
   }else if(S.phase!=="focus"){finishBreak();}
   else{ // idle focus skip -> go to break without reward
     S.cycle++;const nl=S.cycle%D.settings.longEvery===0;setPhase(nl?"longBreak":"shortBreak");renderAll();
@@ -805,7 +877,7 @@ document.addEventListener("click",()=>{
     revealTimer=setTimeout(()=>document.body.classList.remove("reveal"),3500);
   }
 });
-// shop delegation
+// shop delegation (bonus normales)
 $("#shop-list").addEventListener("click",e=>{
   const b=e.target.closest("[data-buy]");if(!b)return;
   const id=b.dataset.buy,bo=BONUS.find(x=>x.id===id);
@@ -814,6 +886,42 @@ $("#shop-list").addEventListener("click",e=>{
   if(id==="shield")D.shield++;
   save();toast(`Comprado: ${bo.name}`,bo.e);
   renderShop();renderTop();checkAch();
+});
+// items sorpresa (compra instantánea)
+$("#shop-fun").addEventListener("click",e=>{
+  const b=e.target.closest("[data-buy]");if(!b)return;
+  const id=b.dataset.buy,bo=FUN.find(x=>x.id===id);
+  if(D.coins<bo.cost)return;
+  D.coins-=bo.cost;
+  if(id==="gamble"){
+    if(Math.random()<0.5){D.coins+=bo.cost*2;toast(`🎲 ¡Ganaste! +${bo.cost*2} fichas`,"🎉",true);}
+    else toast("🎲 Mala suerte... esta vez no","😅");
+  }else if(id==="chest"){
+    const prizes=[
+      {c:15,t:"15 fichas 🪙"},{c:25,t:"25 fichas 🪙"},{c:35,t:"35 fichas 🪙"},
+      {bonus:"expressCut",t:"un Recorte Exprés ✂️"},{bonus:"doubleBreak",t:"un Descanso Doble 🛋️"},
+      {bonus:"x2",t:"un Multiplicador x2 ✨"},{bonus:"instant",t:"un Salto Rápido ⚡"}
+    ];
+    const p=prizes[Math.floor(Math.random()*prizes.length)];
+    if(p.c){D.coins+=p.c;}else{D.bag[p.bonus]=(D.bag[p.bonus]||0)+1;}
+    toast(`🎁 Te ha tocado: ${p.t}`,"🎁",true);
+  }
+  save();renderShop();renderTop();renderArmed();checkAch();
+});
+// temas: comprar y poner
+$("#skins").addEventListener("click",e=>{
+  const buy=e.target.closest("[data-skinbuy]"),put=e.target.closest("[data-skin]");
+  if(buy){
+    const sk=SKINS.find(x=>x.id===buy.dataset.skinbuy);
+    if(D.coins<sk.cost)return;
+    D.coins-=sk.cost;D.skinsOwned=D.skinsOwned||[];D.skinsOwned.push(sk.id);
+    D.skin=sk.id;applySkin(sk.id);save();
+    toast(`Tema desbloqueado: ${sk.name}`,sk.e,true);
+    renderShop();renderTop();checkAch();
+  }else if(put){
+    D.skin=put.dataset.skin;applySkin(D.skin);save();
+    toast("Tema aplicado","🎨");renderShop();
+  }
 });
 $("#bag").addEventListener("click",e=>{
   const u=e.target.closest("[data-use]");if(!u)return;
@@ -842,7 +950,7 @@ $("#settings").addEventListener("click",e=>{
 $("#reset-all").onclick=()=>{
   if(confirm("¿Borrar TODO tu progreso, fichas, bonus y estadísticas? No se puede deshacer.")){
     localStorage.removeItem(KEY);D=load();S={phase:"focus",status:"idle",cycle:0,endAt:0,remaining:0,extra:0,banked:0};
-    setPhase("focus");renderAll();toast("Datos borrados","🧹");
+    applySkin(D.skin||"amanecer");setPhase("focus");renderAll();toast("Datos borrados","🧹");
   }
 };
 // ---- Copia de seguridad: exportar / importar ----
@@ -867,7 +975,7 @@ $("#import-file").onchange=e=>{
       if(!confirm("Esto reemplazará tu progreso actual por el de la copia. ¿Continuar?")){e.target.value="";return;}
       D=Object.assign(JSON.parse(JSON.stringify(DEFAULT)),obj,{settings:Object.assign({},DEFAULT.settings,obj.settings||{}),armed:Object.assign({},DEFAULT.armed,obj.armed||{})});
       save();S={phase:"focus",status:"idle",cycle:0,endAt:0,remaining:0,extra:0,banked:0};
-      setPhase("focus");renderAll();toast("Copia restaurada","✅",true);
+      applySkin(D.skin||"amanecer");setPhase("focus");renderAll();toast("Copia restaurada","✅",true);
     }catch(err){toast("Archivo no válido","⚠️");}
     e.target.value="";
   };
@@ -896,6 +1004,7 @@ const _origPush=Array.prototype.push;
 
 /* ================= INIT ================= */
 ensurePersist();
+applySkin(D.skin||"amanecer");
 checkStreakDecay();
 setPhase("focus");
 renderAll();
