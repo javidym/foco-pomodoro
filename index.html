@@ -200,6 +200,8 @@ body.rest .set-dots i.done{background:var(--rest);box-shadow:0 0 8px var(--rest)
 .switch.on{background:var(--accent);}
 .switch.on i{left:22px;background:#fff;}
 .link-btn{background:none;border:0;color:var(--danger);font-family:inherit;font-size:13px;cursor:pointer;padding:8px;}
+.sync-input{width:100%;background:var(--bg-soft);border:1px solid var(--line);border-radius:12px;color:var(--txt);font-family:inherit;font-size:13px;padding:11px 12px;outline:none;}
+.sync-input:focus{border-color:var(--accent);}
 
 /* ---------- Nav ---------- */
 #nav{
@@ -331,6 +333,31 @@ body.rest #nav button.on{color:var(--rest);}
       <div class="h2">Ajustes</div>
       <div id="settings"></div>
 
+      <div class="h2">Sincronización en la nube</div>
+      <div id="sync-box">
+        <div class="sml" style="color:var(--txt-faint);margin-bottom:10px">Mantén tu progreso igual en el móvil y la tablet. Se configura una vez pegando la dirección de tu base de datos Firebase (gratis). <a href="#" id="sync-help" style="color:var(--accent-2)">¿Cómo?</a></div>
+        <input id="sync-url" class="sync-input" placeholder="https://tu-proyecto-default-rtdb.firebaseio.com" autocapitalize="off" autocorrect="off" spellcheck="false">
+        <div id="sync-off">
+          <button class="use" id="sync-activate" style="width:100%;margin:10px 0 12px">Activar en este dispositivo</button>
+          <div class="sml" style="color:var(--txt-faint);margin-bottom:6px">¿Ya lo activaste en el otro dispositivo? Pega aquí ese código:</div>
+          <div style="display:flex;gap:8px">
+            <input id="sync-code-in" class="sync-input" placeholder="código" style="flex:1;text-transform:uppercase" autocapitalize="characters">
+            <button class="buy" id="sync-connect" style="color:var(--txt)">Conectar</button>
+          </div>
+        </div>
+        <div id="sync-on" style="display:none">
+          <div class="row">
+            <div><div class="lab">Código de sincronización</div><div class="sml" id="sync-status">Activa</div></div>
+            <b id="sync-code" style="font-size:20px;letter-spacing:2px;color:var(--accent-2);font-variant-numeric:tabular-nums"></b>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:10px">
+            <button class="buy" id="sync-copy" style="flex:1;justify-content:center;color:var(--txt)">📋 Copiar código</button>
+            <button class="buy" id="sync-now" style="flex:1;justify-content:center;color:var(--txt)">🔄 Sincronizar</button>
+          </div>
+          <div style="text-align:center;margin-top:6px"><button class="link-btn" id="sync-disable" style="color:var(--txt-faint)">Desactivar sincronización</button></div>
+        </div>
+      </div>
+
       <div class="h2">Copia de seguridad</div>
       <div class="row">
         <div><div class="lab">Tu progreso está a salvo</div><div class="sml" id="persist-info">Guardado en este dispositivo</div></div>
@@ -370,14 +397,17 @@ const DEFAULT={
   shield:0,
   skin:"amanecer", skinsOwned:["amanecer"],
   achievements:{},
+  updatedAt:0,
+  sync:{url:"",code:"",on:false},
   settings:{focus:20, short:5, long:15, longEvery:4, dailyGoal:6, sound:true, autostart:false}
 };
 let D=load();
 function load(){
-  try{const s=JSON.parse(localStorage.getItem(KEY));if(s)return Object.assign(JSON.parse(JSON.stringify(DEFAULT)),s,{settings:Object.assign({},DEFAULT.settings,s.settings),armed:Object.assign({},DEFAULT.armed,s.armed)});}catch(e){}
+  try{const s=JSON.parse(localStorage.getItem(KEY));if(s)return Object.assign(JSON.parse(JSON.stringify(DEFAULT)),s,{settings:Object.assign({},DEFAULT.settings,s.settings),armed:Object.assign({},DEFAULT.armed,s.armed),sync:Object.assign({},DEFAULT.sync,s.sync)});}catch(e){}
   return JSON.parse(JSON.stringify(DEFAULT));
 }
-function save(){localStorage.setItem(KEY,JSON.stringify(D));}
+function save(){D.updatedAt=Date.now();localStorage.setItem(KEY,JSON.stringify(D));schedulePush();}
+function saveRaw(){localStorage.setItem(KEY,JSON.stringify(D));}   // sin tocar updatedAt ni empujar
 
 /* ================= BONUSES ================= */
 const BONUS=[
@@ -867,7 +897,7 @@ $$("#nav button").forEach(b=>b.onclick=()=>{
   $$("main .screen, #screen-timer").forEach(s=>s.classList.remove("active"));
   $("#screen-"+scr).classList.add("active");
   if(scr==="shop")renderShop();
-  if(scr==="stats")renderStats();
+  if(scr==="stats"){renderStats();renderSync();}
 });
 // reveal controls on tap during focus
 document.addEventListener("click",()=>{
@@ -995,6 +1025,81 @@ async function ensurePersist(){
 if("serviceWorker"in navigator){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
 }
+/* ================= SINCRONIZACIÓN (Firebase Realtime DB, REST) ================= */
+let _pushT=null;
+function syncEndpoint(){const u=(D.sync.url||"").trim().replace(/\/+$/,"");return u+"/foco/"+encodeURIComponent(D.sync.code)+".json";}
+function schedulePush(){
+  if(!D.sync||!D.sync.on||!D.sync.url||!D.sync.code)return;
+  clearTimeout(_pushT);_pushT=setTimeout(syncPush,1500);
+}
+async function syncPush(){
+  if(!D.sync.on)return;
+  try{
+    setSyncStatus("Guardando…");
+    const r=await fetch(syncEndpoint(),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(D)});
+    if(!r.ok)throw 0;
+    setSyncStatus("Sincronizado ✓");
+  }catch(e){setSyncStatus("Sin conexión con la nube");}
+}
+async function syncPull(opts){
+  opts=opts||{};
+  if(!D.sync.on&&!opts.force)return "off";
+  if(!opts.force&&S.status!=="idle")return "busy";   // no pisar una sesión en marcha
+  try{
+    const r=await fetch(syncEndpoint(),{cache:"no-store"});
+    if(!r.ok)throw 0;
+    const remote=await r.json();
+    if(remote&&typeof remote==="object"&&"sessions"in remote){
+      if(opts.force||(remote.updatedAt||0)>(D.updatedAt||0)){adoptRemote(remote);setSyncStatus("Sincronizado ✓");return "adopted";}
+      if((D.updatedAt||0)>(remote.updatedAt||0))syncPush();
+      setSyncStatus("Sincronizado ✓");return "ok";
+    }else if(opts.force){await syncPush();return "pushed";}
+    return "ok";
+  }catch(e){setSyncStatus("Sin conexión con la nube");return "err";}
+}
+function adoptRemote(remote){
+  const keep=D.sync;
+  D=Object.assign(JSON.parse(JSON.stringify(DEFAULT)),remote,{settings:Object.assign({},DEFAULT.settings,remote.settings||{}),armed:Object.assign({},DEFAULT.armed,remote.armed||{}),sync:keep});
+  saveRaw();applySkin(D.skin||"amanecer");
+  if(S.status==="idle")setPhase(S.phase);
+  renderAll();renderSync();
+}
+function setSyncStatus(t){const el=$("#sync-status");if(el&&D.sync.on)el.textContent=t;}
+function renderSync(){
+  if(!$("#sync-url"))return;
+  $("#sync-url").value=D.sync.url||"";
+  const on=!!D.sync.on;
+  $("#sync-off").style.display=on?"none":"block";
+  $("#sync-on").style.display=on?"block":"none";
+  if(on)$("#sync-code").textContent=D.sync.code;
+}
+function validUrl(u){u=(u||"").trim();return /^https:\/\/.+firebaseio\.com/.test(u)||/^https:\/\/.+firebasedatabase\.app/.test(u);}
+function genCode(){return Math.random().toString(36).slice(2,8).toUpperCase();}
+
+$("#sync-activate").onclick=async()=>{
+  const url=$("#sync-url").value.trim();
+  if(!validUrl(url)){toast("Pega la URL de tu base de datos Firebase","⚠️");return;}
+  D.sync.url=url;if(!D.sync.code)D.sync.code=genCode();D.sync.on=true;save();renderSync();
+  const res=await syncPull({force:false});
+  if(res==="err"){toast("No conecto con esa URL. Revísala","⚠️");}
+  else{await syncPush();toast("Sincronización activada ☁️","✅",true);}
+};
+$("#sync-connect").onclick=async()=>{
+  const url=$("#sync-url").value.trim(),code=$("#sync-code-in").value.trim().toUpperCase();
+  if(!validUrl(url)){toast("Pega la URL de Firebase","⚠️");return;}
+  if(!code){toast("Escribe el código del otro dispositivo","⚠️");return;}
+  D.sync.url=url;D.sync.code=code;D.sync.on=true;saveRaw();renderSync();
+  const res=await syncPull({force:true});
+  if(res==="adopted")toast("¡Progreso sincronizado!","✅",true);
+  else if(res==="err"){toast("No pude conectar. Revisa la URL","⚠️");}
+  else toast("Conectado. Aún no hay datos en ese código","☁️");
+  renderSync();
+};
+$("#sync-copy").onclick=()=>{try{navigator.clipboard.writeText(D.sync.code);}catch(e){}toast("Código copiado: "+D.sync.code,"📋");};
+$("#sync-now").onclick=async()=>{const res=await syncPull({});if(res!=="err")await syncPush();toast(res==="err"?"Sin conexión":"Sincronizado","🔄");};
+$("#sync-disable").onclick=()=>{D.sync.on=false;save();renderSync();toast("Sincronización desactivada","☁️");};
+$("#sync-help").onclick=(e)=>{e.preventDefault();alert("Activar la sincronización (solo una vez):\n\n1) Entra en console.firebase.google.com y crea un proyecto gratis.\n2) Menú lateral → 'Realtime Database' → 'Crear base de datos' → elige una ubicación → modo de PRUEBA.\n3) Copia la URL que aparece arriba de la base de datos (algo como https://xxxxx-default-rtdb.firebaseio.com).\n4) Pégala en la casilla y pulsa 'Activar en este dispositivo'. Apunta el código que aparece.\n5) En el otro dispositivo: pega la MISMA URL, escribe ese código y pulsa 'Conectar'.\n\n¡Listo! A partir de ahí se sincroniza solo.");};
+
 // keyboard (desktop)
 document.addEventListener("keydown",e=>{if(e.code==="Space"){e.preventDefault();$("#btn-main").click();}});
 // wrap XP level toast
@@ -1008,7 +1113,12 @@ applySkin(D.skin||"amanecer");
 checkStreakDecay();
 setPhase("focus");
 renderAll();
+renderSync();
 showQuote();
+// sincronización: al abrir, cada 30s y al volver a la app
+if(D.sync&&D.sync.on)syncPull({});
+setInterval(()=>{if(D.sync&&D.sync.on&&document.visibilityState==="visible")syncPull({});},30000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&D.sync&&D.sync.on)syncPull({});});
 // intercept xp changes for level-up toast
 let _prevLvl=levelFromXP(D.xp);
 setInterval(()=>{const l=levelFromXP(D.xp);if(l>_prevLvl){toast(`¡Subiste a Nivel ${l}! ${RANKS[Math.min(l-1,RANKS.length-1)]}`,"🎉",true);_prevLvl=l;}},1000);
