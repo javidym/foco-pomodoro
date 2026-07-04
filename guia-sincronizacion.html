@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#141018">
+<title>Guía · Sincronizar Foco</title>
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{
+  --bg:#141018;--card:#221c2c;--card-2:#2a2336;--line:#33293f;
+  --txt:#efe9f5;--txt-dim:#a99fb8;--txt-faint:#6f6580;
+  --accent:#ff7a59;--accent-2:#ffb47a;--accent-b:#ff5f7a;--gold:#ffcf6b;--ok:#48d1a8;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;}
+body{font-family:var(--font);background:radial-gradient(120% 80% at 50% -10%,#241b30 0%,var(--bg) 55%);color:var(--txt);-webkit-font-smoothing:antialiased;line-height:1.55;min-height:100vh;}
+.wrap{max-width:560px;margin:0 auto;padding:calc(24px + env(safe-area-inset-top)) 20px calc(40px + env(safe-area-inset-bottom));}
+.top{display:flex;align-items:center;gap:11px;margin-bottom:6px;}
+.top .dot{width:13px;height:13px;border-radius:50%;background:var(--gold);box-shadow:0 0 16px var(--gold);flex:none;}
+.top b{font-size:15px;letter-spacing:.2px;}
+h1{font-size:26px;font-weight:800;letter-spacing:-.5px;margin:14px 0 6px;}
+.lead{color:var(--txt-dim);font-size:14.5px;margin:0 0 8px;}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--accent-2);margin:6px 0 22px;}
+
+.step{display:flex;gap:15px;padding:17px 17px;background:var(--card);border:1px solid var(--line);border-radius:18px;margin-bottom:12px;position:relative;}
+.num{flex:none;width:34px;height:34px;border-radius:50%;background:linear-gradient(150deg,var(--accent),var(--accent-b));color:#fff;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 20px -8px rgba(255,122,89,.7);}
+.step .body{flex:1;min-width:0;}
+.step h3{margin:3px 0 5px;font-size:16px;font-weight:700;}
+.step p{margin:0;color:var(--txt-dim);font-size:14px;}
+.step .tip{margin-top:8px;font-size:12.5px;color:var(--txt-faint);}
+b.hl{color:var(--txt);}
+.tag{display:inline-block;background:var(--card-2);border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:12.5px;font-weight:600;color:var(--accent-2);white-space:nowrap;}
+code{background:#0e0b13;border:1px solid var(--line);border-radius:8px;padding:3px 8px;font-size:12.5px;color:var(--gold);font-family:ui-monospace,Menlo,Consolas,monospace;word-break:break-all;display:inline-block;margin-top:4px;}
+.callout{display:flex;gap:12px;background:linear-gradient(135deg,#2c2136,#38243a);border:1px solid var(--line);border-radius:16px;padding:15px 16px;margin:20px 0 8px;}
+.callout .e{font-size:22px;flex:none;}
+.callout .t{font-size:13.5px;color:var(--txt-dim);}
+.callout .t b{color:var(--txt);}
+.divider{height:1px;background:var(--line);margin:26px 0 22px;border:0;}
+.done{text-align:center;padding:22px 18px;background:linear-gradient(135deg,#1c2c26,#14231f);border:1px solid #2f5348;border-radius:18px;margin-top:8px;}
+.done .big{font-size:34px;}
+.done h3{margin:6px 0 4px;font-size:18px;color:var(--ok);}
+.done p{margin:0;color:var(--txt-dim);font-size:14px;}
+.backbtn{display:block;text-align:center;margin:26px auto 0;background:var(--card);border:1px solid var(--line);color:var(--txt);text-decoration:none;font-weight:700;font-size:15px;padding:15px;border-radius:15px;max-width:280px;}
+.backbtn:active{transform:scale(.97);}
+.sub{color:var(--txt-faint);font-size:12px;text-align:center;margin-top:16px;}
+a{color:var(--accent-2);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><span class="dot"></span><b>Foco · Pomodoro</b></div>
+  <h1>Sincronizar entre tus dispositivos</h1>
+  <p class="lead">Para que tu progreso sea el mismo en el móvil y la tablet, la app usa una base de datos gratuita de Google (Firebase). Solo hay que configurarla <b class="hl">una vez</b>.</p>
+  <span class="pill">⏱️ Unos 5 minutos · una sola vez</span>
+
+  <div class="step"><div class="num">1</div><div class="body">
+    <h3>Abre la consola de Firebase</h3>
+    <p>En el navegador, entra en <a href="https://console.firebase.google.com" target="_blank" rel="noopener">console.firebase.google.com</a> e inicia sesión con tu cuenta de Google (la misma que usas normalmente).</p>
+  </div></div>
+
+  <div class="step"><div class="num">2</div><div class="body">
+    <h3>Crea un proyecto</h3>
+    <p>Pulsa <span class="tag">Crear un proyecto</span>, ponle un nombre (por ejemplo «Foco») y continúa. Si te ofrece <b class="hl">Google Analytics</b>, puedes <b class="hl">desactivarlo</b> para ir más rápido. Termina con <span class="tag">Crear proyecto</span>.</p>
+    <div class="tip">Puede tardar unos segundos en prepararse.</div>
+  </div></div>
+
+  <div class="step"><div class="num">3</div><div class="body">
+    <h3>Entra en «Realtime Database»</h3>
+    <p>En el menú de la izquierda busca <b class="hl">Compilación</b> (Build) y dentro <span class="tag">Realtime Database</span>. Ojo: es <b class="hl">Realtime Database</b>, no «Firestore».</p>
+  </div></div>
+
+  <div class="step"><div class="num">4</div><div class="body">
+    <h3>Crea la base de datos en modo de prueba</h3>
+    <p>Pulsa <span class="tag">Crear base de datos</span>. Elige una ubicación (mejor <b class="hl">Europa</b>) y, cuando pregunte por las reglas de seguridad, selecciona <span class="tag">Iniciar en modo de prueba</span> y confirma con <span class="tag">Habilitar</span>.</p>
+  </div></div>
+
+  <div class="step"><div class="num">5</div><div class="body">
+    <h3>Copia la dirección (URL)</h3>
+    <p>Arriba de la base de datos verás una dirección. Cópiala entera. Tiene esta forma:</p>
+    <code>https://tu-proyecto-default-rtdb.firebaseio.com</code>
+  </div></div>
+
+  <div class="step"><div class="num">6</div><div class="body">
+    <h3>Actívala en tu dispositivo principal</h3>
+    <p>Abre la app Foco → <b class="hl">Progreso</b> → <b class="hl">Sincronización en la nube</b>. Pega ahí la dirección y pulsa <span class="tag">Activar en este dispositivo</span>. Aparecerá un <b class="hl">código</b> (por ejemplo <code style="color:var(--accent-2)">A1B2C3</code>). Apúntalo.</p>
+  </div></div>
+
+  <div class="step"><div class="num">7</div><div class="body">
+    <h3>Conecta el otro dispositivo</h3>
+    <p>En el móvil o la tablet que falte, abre la app → Progreso → Sincronización. Pega la <b class="hl">misma dirección</b>, escribe el <b class="hl">código</b> del paso anterior y pulsa <span class="tag">Conectar</span>.</p>
+  </div></div>
+
+  <div class="done">
+    <div class="big">🎉</div>
+    <h3>¡Listo!</h3>
+    <p>A partir de ahora tu progreso se sincroniza solo: al abrir la app, al volver a ella y cada pocos segundos. Gana el cambio más reciente.</p>
+  </div>
+
+  <hr class="divider">
+
+  <div class="callout"><span class="e">⏳</span><div class="t"><b>Si dentro de un mes deja de sincronizar:</b> el «modo de prueba» de Firebase caduca a los 30 días. Entra en tu base de datos → pestaña <b>Reglas</b> (Rules) y cambia <code>false</code> por <code>true</code> en <code>.read</code> y <code>.write</code>, luego «Publicar». Si te lías, pídemelo y te guío.</div></div>
+
+  <div class="callout"><span class="e">🔒</span><div class="t"><b>¿Es seguro?</b> Ahí solo se guardan tus puntos y estadísticas del Pomodoro, nada personal. El acceso va por un código difícil de adivinar. Aun así, guarda de vez en cuando una <b>copia de seguridad</b> (Exportar copia) como respaldo.</div></div>
+
+  <div class="callout"><span class="e">💡</span><div class="t"><b>¿No quieres complicarte?</b> La sincronización es opcional. Puedes seguir usando un dispositivo como principal y pasar el progreso con <b>Exportar / Importar copia</b> cuando quieras.</div></div>
+
+  <a class="backbtn" href="index.html">← Volver a la app</a>
+  <div class="sub">Foco · Pomodoro</div>
+</div>
+</body>
+</html>

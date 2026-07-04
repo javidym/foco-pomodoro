@@ -1098,7 +1098,7 @@ $("#sync-connect").onclick=async()=>{
 $("#sync-copy").onclick=()=>{try{navigator.clipboard.writeText(D.sync.code);}catch(e){}toast("Código copiado: "+D.sync.code,"📋");};
 $("#sync-now").onclick=async()=>{const res=await syncPull({});if(res!=="err")await syncPush();toast(res==="err"?"Sin conexión":"Sincronizado","🔄");};
 $("#sync-disable").onclick=()=>{D.sync.on=false;save();renderSync();toast("Sincronización desactivada","☁️");};
-$("#sync-help").onclick=(e)=>{e.preventDefault();alert("Activar la sincronización (solo una vez):\n\n1) Entra en console.firebase.google.com y crea un proyecto gratis.\n2) Menú lateral → 'Realtime Database' → 'Crear base de datos' → elige una ubicación → modo de PRUEBA.\n3) Copia la URL que aparece arriba de la base de datos (algo como https://xxxxx-default-rtdb.firebaseio.com).\n4) Pégala en la casilla y pulsa 'Activar en este dispositivo'. Apunta el código que aparece.\n5) En el otro dispositivo: pega la MISMA URL, escribe ese código y pulsa 'Conectar'.\n\n¡Listo! A partir de ahí se sincroniza solo.");};
+$("#sync-help").onclick=(e)=>{e.preventDefault();window.open("guia-sincronizacion.html","_blank");};
 
 // keyboard (desktop)
 document.addEventListener("keydown",e=>{if(e.code==="Space"){e.preventDefault();$("#btn-main").click();}});

@@ -1,6 +1,6 @@
 /* Service worker: red primero, cache de respaldo (para uso sin conexión) */
-const CACHE = "foco-v1";
-const ASSETS = ["./", "./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./icon.svg"];
+const CACHE = "foco-v2";
+const ASSETS = ["./", "./index.html", "./guia-sincronizacion.html", "./manifest.json", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./icon.svg"];
 
 self.addEventListener("install", e => {
   self.skipWaiting();
