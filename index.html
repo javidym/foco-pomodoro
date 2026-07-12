@@ -535,6 +535,7 @@ function beep(kind){
 function setPhase(p,resetCycleTab){
   S.phase=p;S.status="idle";S.extra=0;
   S.remaining=plannedDuration(p);
+  S._locked=S.remaining;          // evita mostrar la duración de la fase anterior
   S.endAt=0;
   updatePhaseUI();renderTimer();updateBodyClass();
 }
